@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/User.php';
+require_once __DIR__ . '/../../functions/user.php';
 
-$pageTitle = 'Thông tin cá nhân - Thư viện Đại học';
+$pageTitle = 'Thông tin cá nhân - Thư viện Số';
 $currentPage = 'profile';
 
 if (!isLoggedIn()) {
@@ -10,9 +10,8 @@ if (!isLoggedIn()) {
     redirect('index.php?page=login');
 }
 
-$userModel = new User();
 $userId = $_SESSION['user_id'];
-$user = $userModel->getById($userId);
+$user = user_get_by_id($userId);
 
 if (!$user) {
     $_SESSION['alert'] = alert('Không tìm thấy thông tin người dùng!', 'error');
@@ -21,20 +20,20 @@ if (!$user) {
 
 // Xử lý cập nhật thông tin
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update') {
-    $userModel->id = $userId;
-    $userModel->username = sanitize($_POST['username']);
-    $userModel->email = sanitize($_POST['email']);
-    $userModel->full_name = sanitize($_POST['full_name']);
-    $userModel->phone = sanitize($_POST['phone']);
-    $userModel->address = sanitize($_POST['address']);
-    $userModel->student_id = sanitize($_POST['student_id']);
-    $userModel->role = $user['role']; // Giữ nguyên role
-    $userModel->status = $user['status']; // Giữ nguyên status
+    $data = [
+        'username'   => sanitize($_POST['username']),
+        'email'      => sanitize($_POST['email']),
+        'full_name'  => sanitize($_POST['full_name']),
+        'phone'      => sanitize($_POST['phone']),
+        'address'    => sanitize($_POST['address']),
+        'student_id' => sanitize($_POST['student_id']),
+        'role'       => $user['role'],
+        'status'     => $user['status'],
+    ];
 
-    if ($userModel->update()) {
+    if (user_update($userId, $data)) {
         $_SESSION['alert'] = alert('Cập nhật thông tin thành công!', 'success');
-        // Cập nhật session
-        $_SESSION['full_name'] = $userModel->full_name;
+        $_SESSION['full_name'] = $data['full_name'];
         redirect('index.php?page=profile');
     } else {
         $_SESSION['alert'] = alert('Có lỗi xảy ra khi cập nhật thông tin!', 'error');

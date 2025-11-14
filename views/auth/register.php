@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 
-$pageTitle = 'Đăng ký - Thư viện Đại học';
+$pageTitle = 'Đăng ký - Thư viện Số';
 $currentPage = 'register';
 
 // Xử lý đăng ký
@@ -47,9 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (empty($errors)) {
-        $database = new Database();
-        $conn = $database->getConnection();
-        
+        $conn = get_db_connection();
+        if (!$conn) {
+            $errors[] = "Không thể kết nối cơ sở dữ liệu!";
+        } else {
         // Kiểm tra username đã tồn tại
         $query = "SELECT id FROM users WHERE username = :username OR email = :email OR student_id = :student_id";
         $stmt = $conn->prepare($query);
@@ -64,15 +65,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Tạo tài khoản mới
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             
-            $query = "INSERT INTO users (username, email, password, full_name, phone, address, student_id, role, status) 
-                      VALUES (:username, :email, :password, :full_name, :phone, :address, :student_id, 'student', 'active')";
+            // Kiểm tra xem cột address có tồn tại không
+            try {
+                $checkAddress = $conn->query("SHOW COLUMNS FROM users LIKE 'address'")->fetch();
+                $hasAddress = ($checkAddress !== false);
+            } catch (Exception $e) {
+                $hasAddress = false;
+            }
+            
+            if ($hasAddress) {
+                $query = "INSERT INTO users (username, email, password, full_name, phone, address, student_id, role, status) 
+                          VALUES (:username, :email, :password, :full_name, :phone, :address, :student_id, 'student', 'active')";
+            } else {
+                $query = "INSERT INTO users (username, email, password, full_name, phone, student_id, role, status) 
+                          VALUES (:username, :email, :password, :full_name, :phone, :student_id, 'student', 'active')";
+            }
+            
             $stmt = $conn->prepare($query);
             $stmt->bindParam(':username', $username);
             $stmt->bindParam(':email', $email);
             $stmt->bindParam(':password', $hashed_password);
             $stmt->bindParam(':full_name', $full_name);
             $stmt->bindParam(':phone', $phone);
-            $stmt->bindParam(':address', $address);
+            if ($hasAddress) {
+                $stmt->bindParam(':address', $address);
+            }
             $stmt->bindParam(':student_id', $student_id);
             
             if ($stmt->execute()) {
@@ -80,6 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 redirect('index.php?page=login');
             } else {
                 $errors[] = "Có lỗi xảy ra khi tạo tài khoản!";
+            }
             }
         }
     }

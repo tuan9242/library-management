@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Book.php';
-require_once __DIR__ . '/../../models/Borrow.php';
+require_once __DIR__ . '/../../functions/book.php';
+require_once __DIR__ . '/../../functions/borrow.php';
 
-$pageTitle = 'Chi tiết sách - Thư viện Đại học';
+$pageTitle = 'Chi tiết sách - Thư viện Số';
 $currentPage = 'book-detail';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -11,11 +11,9 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 
 $bookId = (int)$_GET['id'];
-$bookModel = new Book();
-$borrowModel = new Borrow();
 
 // Lấy thông tin sách
-$book = $bookModel->getById($bookId);
+$book = book_get_by_id($bookId);
 if (!$book) {
     $_SESSION['alert'] = alert('Không tìm thấy sách!', 'error');
     redirect('index.php');
@@ -28,11 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         redirect('index.php?page=login');
     }
     
-    require_once __DIR__ . '/../../models/Cart.php';
-    $cartModel = new Cart();
+    require_once __DIR__ . '/../../functions/cart.php';
     $quantity = isset($_POST['quantity']) ? max(1, (int)$_POST['quantity']) : 1;
     $durationDays = isset($_POST['duration_days']) ? max(1, (int)$_POST['duration_days']) : 30;
-    $result = $cartModel->add($_SESSION['user_id'], $bookId, $quantity, $durationDays);
+    $result = cart_add($_SESSION['user_id'], $bookId, $quantity, $durationDays);
     
     if ($result['success']) {
         $_SESSION['alert'] = alert($result['message'], 'success');
@@ -54,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } else {
         $quantity = isset($_POST['quantity']) ? max(1, (int)$_POST['quantity']) : 1;
         $durationDays = isset($_POST['duration_days']) ? max(1, (int)$_POST['duration_days']) : 30;
-        $result = $borrowModel->create($_SESSION['user_id'], $bookId, $quantity, $durationDays);
+        $result = borrow_create($_SESSION['user_id'], $bookId, $quantity, $durationDays);
         if ($result['success']) {
             $_SESSION['alert'] = alert($result['message'], 'success');
         } else {
@@ -65,22 +62,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Lấy sách liên quan
-$relatedBooks = $bookModel->getByCategory($book['category_id'], 4, $bookId);
+$relatedBooks = !empty($book['category_id'])
+    ? book_get_by_category((int)$book['category_id'], 4, $bookId)
+    : [];
 
 // Kiểm tra xem người dùng đã mượn sách này chưa
 $alreadyBorrowed = false;
 if (isLoggedIn()) {
-    $checkBorrowQuery = "SELECT id FROM borrows 
-                        WHERE user_id = :user_id AND book_id = :book_id 
-                        AND (status = 'borrowed' OR status = 'pending') 
-                        LIMIT 1";
-    $database = new Database();
-    $conn = $database->getConnection();
-    $checkBorrowStmt = $conn->prepare($checkBorrowQuery);
-    $checkBorrowStmt->bindParam(':user_id', $_SESSION['user_id']);
-    $checkBorrowStmt->bindParam(':book_id', $bookId);
-    $checkBorrowStmt->execute();
-    $alreadyBorrowed = $checkBorrowStmt->fetch() ? true : false;
+    $conn = get_db_connection();
+    if ($conn) {
+        $checkBorrowStmt = $conn->prepare(
+            "SELECT id FROM borrows 
+             WHERE user_id = :user_id AND book_id = :book_id 
+               AND (status = 'borrowed' OR status = 'pending') 
+             LIMIT 1"
+        );
+        $checkBorrowStmt->bindValue(':user_id', $_SESSION['user_id'], PDO::PARAM_INT);
+        $checkBorrowStmt->bindValue(':book_id', $bookId, PDO::PARAM_INT);
+        $checkBorrowStmt->execute();
+        $alreadyBorrowed = $checkBorrowStmt->fetch() ? true : false;
+    }
 }
 
 include __DIR__ . '/../layout/header.php';

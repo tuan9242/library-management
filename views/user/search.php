@@ -1,16 +1,13 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Book.php';
-require_once __DIR__ . '/../../models/Category.php';
+require_once __DIR__ . '/../../functions/book.php';
+require_once __DIR__ . '/../../functions/category.php';
 
-$pageTitle = 'Tìm kiếm sách - Thư viện Đại học';
+$pageTitle = 'Tìm kiếm sách - Thư viện Số';
 $currentPage = 'search';
 
-$bookModel = new Book();
-$categoryModel = new Category();
-
 // Lấy danh sách danh mục
-$categories = $categoryModel->getAll();
+$categories = category_get_all();
 
 // Xử lý tìm kiếm
 $keyword = isset($_GET['keyword']) ? sanitize($_GET['keyword']) : '';
@@ -24,13 +21,14 @@ $totalBooks = 0;
 $totalPages = 0;
 
 if (!empty($keyword) || !empty($category)) {
-    $books = $bookModel->search($keyword, $category, $limit, $offset);
-    $totalBooks = $bookModel->getSearchCount($keyword, $category);
+    $categoryFilter = $category !== '' ? (int)$category : null;
+    $books = book_search($keyword, $categoryFilter, $limit, $offset);
+    $totalBooks = book_get_search_count($keyword, $categoryFilter);
     $totalPages = ceil($totalBooks / $limit);
 } else {
     // Hiển thị tất cả sách nếu không có từ khóa tìm kiếm
-    $books = $bookModel->getAll($limit, $offset);
-    $totalBooks = $bookModel->getTotalCount();
+    $books = book_get_all($limit, $offset);
+    $totalBooks = book_get_total_count();
     $totalPages = ceil($totalBooks / $limit);
 }
 
@@ -99,7 +97,7 @@ include __DIR__ . '/../layout/header.php';
                     
                     <?php if (!empty($category)): ?>
                         <div class="search-category">
-                            Danh mục: <strong><?php echo htmlspecialchars($categoryModel->getNameById($category)); ?></strong>
+                            Danh mục: <strong><?php echo htmlspecialchars(category_get_name_by_id((int)$category)); ?></strong>
                         </div>
                     <?php endif; ?>
                 </div>

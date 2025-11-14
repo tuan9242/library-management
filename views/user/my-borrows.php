@@ -1,21 +1,20 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Borrow.php';
+require_once __DIR__ . '/../../functions/borrow.php';
 
-$pageTitle = 'Sách đã mượn - Thư viện Đại học';
+$pageTitle = 'Sách đã mượn - Thư viện Số';
 $currentPage = 'my-borrows';
 
 if (!isLoggedIn()) {
     redirect('index.php?page=login');
 }
 
-$borrowModel = new Borrow();
 $userId = $_SESSION['user_id'];
 
 // Xử lý trả sách
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'return') {
     $borrowId = (int)$_POST['borrow_id'];
-    $result = $borrowModel->returnBook($borrowId);
+    $result = borrow_return_book($borrowId);
     
     if ($result['success']) {
         $_SESSION['alert'] = alert('Trả sách thành công!', 'success');
@@ -26,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Lấy danh sách sách đã mượn
-$borrows = $borrowModel->getByUser($userId);
+$borrows = borrow_get_by_user($userId);
 
 // Phân loại sách theo trạng thái
 $currentBorrows = array_filter($borrows, function($borrow) {

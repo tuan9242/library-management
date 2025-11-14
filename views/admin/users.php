@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/User.php';
+require_once __DIR__ . '/../../functions/user.php';
 
 if (!isAdmin()) {
     redirect('index.php');
@@ -10,12 +10,10 @@ $pageTitle = 'Quản lý người dùng - Admin';
 $currentPage = 'admin';
 $page = 'admin-users';
 
-$userModel = new User();
-
 // Xử lý xóa
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     if (!isAdmin()) { redirect('index.php'); }
-    if ($userModel->delete($_GET['id'])) {
+    if (user_delete((int)$_GET['id'])) {
         $_SESSION['alert'] = alert('Xóa người dùng thành công!', 'success');
     } else {
         $_SESSION['alert'] = alert('Không thể xóa người dùng này!', 'error');
@@ -25,25 +23,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
 // Xử lý thêm/sửa
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $userModel->username = sanitize($_POST['username']);
-    $userModel->email = sanitize($_POST['email']);
-    $userModel->full_name = sanitize($_POST['full_name']);
-    $userModel->phone = sanitize($_POST['phone']);
-    $userModel->address = sanitize($_POST['address'] ?? '');
-    $userModel->role = sanitize($_POST['role']);
-    $userModel->student_id = sanitize($_POST['student_id'] ?? '');
-    $userModel->status = sanitize($_POST['status']);
+    $userData = [
+        'username'   => sanitize($_POST['username']),
+        'email'      => sanitize($_POST['email']),
+        'full_name'  => sanitize($_POST['full_name']),
+        'phone'      => sanitize($_POST['phone'] ?? ''),
+        'address'    => sanitize($_POST['address'] ?? ''),
+        'role'       => sanitize($_POST['role']),
+        'student_id' => sanitize($_POST['student_id'] ?? ''),
+        'status'     => sanitize($_POST['status']),
+    ];
     
     if (isset($_POST['user_id']) && !empty($_POST['user_id'])) {
-        $userModel->id = $_POST['user_id'];
-        if ($userModel->update()) {
+        if (user_update((int)$_POST['user_id'], $userData)) {
             $_SESSION['alert'] = alert('Cập nhật người dùng thành công!', 'success');
         } else {
             $_SESSION['alert'] = alert('Có lỗi xảy ra!', 'error');
         }
     } else {
-        $userModel->password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-        if ($userModel->create()) {
+        $userData['password'] = $_POST['password'];
+        if (user_create($userData)) {
             $_SESSION['alert'] = alert('Thêm người dùng thành công!', 'success');
         } else {
             $_SESSION['alert'] = alert('Có lỗi xảy ra!', 'error');
@@ -52,10 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('index.php?page=admin-users');
 }
 
-$users = $userModel->getAll();
+$users = user_get_all();
 $editUser = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $editUser = $userModel->getById($_GET['id']);
+    $editUser = user_get_by_id((int)$_GET['id']);
 }
 
 include __DIR__ . '/../layout/header.php';
@@ -86,7 +85,7 @@ include __DIR__ . '/../layout/header.php';
                     </h2>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="table-responsive table-wrapper">
                         <table class="table">
                             <thead>
                                 <tr>
@@ -105,8 +104,8 @@ include __DIR__ . '/../layout/header.php';
                             <tbody>
                                 <?php foreach ($users as $user): ?>
                                 <tr>
-                                    <td>#<?php echo $user['id']; ?></td>
-                                    <td>
+                                    <td class="col-id">#<?php echo $user['id']; ?></td>
+                                    <td class="col-avatar">
                                         <?php 
                                             $name = trim($user['full_name'] ?: $user['username']);
                                             $initials = '';
@@ -117,12 +116,12 @@ include __DIR__ . '/../layout/header.php';
                                             <span><?php echo $initials; ?></span>
                                         </div>
                                     </td>
-                                    <td><strong><?php echo htmlspecialchars($user['username']); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($user['full_name']); ?></td>
-                                    <td><?php echo htmlspecialchars($user['email']); ?></td>
-                                    <td><?php echo htmlspecialchars($user['phone'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($user['student_id'] ?? 'N/A'); ?></td>
-                                    <td>
+                                    <td class="col-username"><strong><?php echo htmlspecialchars($user['username']); ?></strong></td>
+                                    <td class="col-fullname"><?php echo htmlspecialchars($user['full_name']); ?></td>
+                                    <td class="col-email"><?php echo htmlspecialchars($user['email']); ?></td>
+                                    <td class="col-phone"><?php echo htmlspecialchars($user['phone'] ?? 'N/A'); ?></td>
+                                    <td class="col-student-id"><?php echo htmlspecialchars($user['student_id'] ?? 'N/A'); ?></td>
+                                    <td class="col-role">
                                         <?php
                                         $roleColors = ['admin' => 'danger', 'librarian' => 'warning', 'student' => 'primary'];
                                         $roleLabels = ['admin' => 'Admin', 'librarian' => 'Thủ thư', 'student' => 'Sinh viên'];
@@ -131,14 +130,14 @@ include __DIR__ . '/../layout/header.php';
                                             <?php echo $roleLabels[$user['role']]; ?>
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="col-status">
                                         <?php if ($user['status'] === 'active'): ?>
                                             <span class="badge badge-success">Hoạt động</span>
                                         <?php else: ?>
                                             <span class="badge badge-danger">Không hoạt động</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td class="col-actions">
                                         <div class="btn-group">
                                             <a href="index.php?page=admin-users&action=edit&id=<?php echo $user['id']; ?>" 
                                                class="btn btn-sm btn-primary">
@@ -268,6 +267,19 @@ include __DIR__ . '/../layout/header.php';
         </form>
     </div>
 </div>
+
+<style>
+.col-id { width: 80px; white-space: nowrap; }
+.col-avatar { width: 80px; white-space: nowrap; }
+.col-username { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-fullname { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-email { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-phone { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-student-id { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-role { width: 120px; white-space: nowrap; }
+.col-status { width: 140px; white-space: nowrap; }
+.col-actions { width: auto; white-space: nowrap; max-width: none; }
+</style>
 
 <script>
 function toggleModal(modalId) {

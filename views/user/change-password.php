@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/User.php';
+require_once __DIR__ . '/../../functions/user.php';
 
-$pageTitle = 'Đổi mật khẩu - Thư viện Đại học';
+$pageTitle = 'Đổi mật khẩu - Thư viện Số';
 $currentPage = 'change-password';
 
 if (!isLoggedIn()) {
@@ -10,7 +10,6 @@ if (!isLoggedIn()) {
     redirect('index.php?page=login');
 }
 
-$userModel = new User();
 $userId = $_SESSION['user_id'];
 
 // Xử lý đổi mật khẩu
@@ -38,10 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($errors)) {
         // Lấy thông tin user hiện tại
-        $user = $userModel->getById($userId);
+        $user = user_get_by_id($userId);
         
         if ($user && password_verify($currentPassword, $user['password'])) {
-            if ($userModel->changePassword($userId, $newPassword)) {
+            if (user_change_password($userId, $newPassword)) {
                 $_SESSION['alert'] = alert('Đổi mật khẩu thành công!', 'success');
                 redirect('index.php?page=profile');
             } else {

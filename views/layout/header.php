@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle ?? 'Thư viện Đại học'; ?></title>
+    <title><?php echo $pageTitle ?? 'Thư viện Số'; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -15,7 +15,7 @@
             <div class="header-content">
                     <a href="index.php" class="logo">
                         <i class="fas fa-book-open"></i>
-                        <span>Thư viện Đại học</span>
+                        <span>Thư viện Số</span>
                     </a>
                     
                     <nav class="nav-menu">
@@ -47,19 +47,18 @@
                 <div class="header-actions">
                     <?php if (isLoggedIn()): 
                         try {
-                            require_once __DIR__ . '/../../models/Notification.php';
-                            require_once __DIR__ . '/../../models/Cart.php';
-                            $notificationModel = new Notification();
-                            $cartModel = new Cart();
-                            $unreadCount = $notificationModel->getUnreadCount($_SESSION['user_id']);
-                            $cartCount = $cartModel->getCount($_SESSION['user_id']);
+                            require_once __DIR__ . '/../../functions/notification.php';
+                            require_once __DIR__ . '/../../functions/cart.php';
+                            $unreadCount = notification_get_unread_count($_SESSION['user_id']);
+                            // Chỉ hiển thị giỏ hàng cho sinh viên
+                            $cartCount = (!isAdmin() && !isLibrarian()) ? cart_get_count($_SESSION['user_id']) : 0;
                         } catch (Exception $e) {
                             // Nếu bảng chưa tồn tại, set giá trị mặc định
                             $unreadCount = 0;
                             $cartCount = 0;
                         }
                     ?>
-                        <!-- Notifications -->
+                        <!-- Notifications - Hiển thị cho tất cả user đã đăng nhập -->
                         <div class="notification-dropdown">
                             <button class="notification-btn" id="notificationBtn">
                                 <i class="fas fa-bell"></i>
@@ -136,7 +135,7 @@
         <div class="mobile-menu-header">
             <div class="logo">
                 <i class="fas fa-book-open"></i>
-                <span>Thư viện ĐH</span>
+                <span>Thư viện Số</span>
             </div>
             <button class="close-btn" id="closeMobileMenu">
                 <i class="fas fa-times"></i>
@@ -356,7 +355,7 @@
                 
                 // Close when clicking outside
                 document.addEventListener('click', function(e) {
-                    if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+                    if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
                         dropdown.classList.remove('active');
                     }
                 });

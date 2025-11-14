@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Book.php';
-require_once __DIR__ . '/../../models/User.php';
-require_once __DIR__ . '/../../models/Borrow.php';
+require_once __DIR__ . '/../../functions/book.php';
+require_once __DIR__ . '/../../functions/user.php';
+require_once __DIR__ . '/../../functions/borrow.php';
 
 if (!isLibrarian()) {
     redirect('index.php');
@@ -12,36 +12,31 @@ $pageTitle = 'Báo cáo thống kê - Admin';
 $currentPage = 'admin';
 $page = 'admin-reports';
 
-$bookModel = new Book();
-$userModel = new User();
-$borrowModel = new Borrow();
-
-// Lấy thống kê tổng quan
-$bookStats = $bookModel->getTotalCount();
-$userStats = $userModel->getStatistics();
-$borrowStats = $borrowModel->getStatistics();
+$bookStats = book_get_total_count();
+$userStats = user_get_statistics();
+$borrowStats = borrow_get_statistics();
 
 // Lấy sách phổ biến
-$popularBooks = $bookModel->getPopular(10);
+$popularBooks = book_get_popular(10);
 
 // Lấy sách quá hạn
-$overdueBooks = $borrowModel->getOverdueBooks();
+$overdueBooks = borrow_get_overdue_books();
 
 // Lấy thống kê theo tháng
-$database = new Database();
-$conn = $database->getConnection();
+$conn = get_db_connection();
 
 $monthlyStats = [];
-for ($i = 11; $i >= 0; $i--) {
-    $month = date('Y-m', strtotime("-$i month"));
-    $query = "SELECT COUNT(*) as count FROM borrows WHERE DATE_FORMAT(created_at, '%Y-%m') = :month";
-    $stmt = $conn->prepare($query);
-    $stmt->bindParam(':month', $month);
-    $stmt->execute();
-    $monthlyStats[] = [
-        'month' => $month,
-        'count' => $stmt->fetch()['count']
-    ];
+if ($conn) {
+    for ($i = 11; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i month"));
+        $stmt = $conn->prepare("SELECT COUNT(*) as count FROM borrows WHERE DATE_FORMAT(created_at, '%Y-%m') = :month");
+        $stmt->bindValue(':month', $month);
+        $stmt->execute();
+        $monthlyStats[] = [
+            'month' => $month,
+            'count' => $stmt->fetch()['count']
+        ];
+    }
 }
 
 include __DIR__ . '/../layout/header.php';
@@ -143,7 +138,7 @@ include __DIR__ . '/../layout/header.php';
                     </h2>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="table-responsive table-wrapper">
                         <table class="table">
                             <thead>
                                 <tr>
@@ -158,18 +153,18 @@ include __DIR__ . '/../layout/header.php';
                             <tbody>
                                 <?php foreach ($popularBooks as $index => $book): ?>
                                 <tr>
-                                    <td><?php echo $index + 1; ?></td>
-                                    <td>
+                                    <td class="col-stt"><?php echo $index + 1; ?></td>
+                                    <td class="col-book-title">
                                         <strong><?php echo htmlspecialchars($book['title']); ?></strong>
                                     </td>
-                                    <td><?php echo htmlspecialchars($book['author']); ?></td>
-                                    <td><?php echo htmlspecialchars($book['category_name']); ?></td>
-                                    <td>
+                                    <td class="col-author"><?php echo htmlspecialchars($book['author']); ?></td>
+                                    <td class="col-category"><?php echo htmlspecialchars($book['category_name']); ?></td>
+                                    <td class="col-count">
                                         <span class="badge badge-primary">
                                             <?php echo $book['borrow_count']; ?> lượt
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="col-status">
                                         <?php if ($book['available_quantity'] > 0): ?>
                                             <span class="badge badge-success">Có sẵn</span>
                                         <?php else: ?>
@@ -193,7 +188,7 @@ include __DIR__ . '/../layout/header.php';
                     </h2>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="table-responsive table-wrapper">
                         <table class="table">
                             <thead>
                                 <tr>
@@ -213,20 +208,20 @@ include __DIR__ . '/../layout/header.php';
                                     $fineAmount = calculateFine($borrow['due_date']);
                                 ?>
                                 <tr>
-                                    <td>#<?php echo $borrow['id']; ?></td>
-                                    <td>
+                                    <td class="col-id">#<?php echo $borrow['id']; ?></td>
+                                    <td class="col-borrower-name">
                                         <strong><?php echo htmlspecialchars($borrow['full_name']); ?></strong>
                                     </td>
-                                    <td><?php echo htmlspecialchars($borrow['phone']); ?></td>
-                                    <td><?php echo htmlspecialchars($borrow['title']); ?></td>
-                                    <td><?php echo formatDate($borrow['borrow_date']); ?></td>
-                                    <td><?php echo formatDate($borrow['due_date']); ?></td>
-                                    <td>
+                                    <td class="col-phone"><?php echo htmlspecialchars($borrow['phone']); ?></td>
+                                    <td class="col-book-title"><?php echo htmlspecialchars($borrow['title']); ?></td>
+                                    <td class="col-date"><?php echo formatDate($borrow['borrow_date']); ?></td>
+                                    <td class="col-date"><?php echo formatDate($borrow['due_date']); ?></td>
+                                    <td class="col-days-overdue">
                                         <span class="badge badge-danger">
                                             <?php echo floor($daysOverdue); ?> ngày
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="col-fine">
                                         <span class="fine-amount">
                                             <?php echo number_format($fineAmount); ?> VNĐ
                                         </span>
@@ -293,7 +288,21 @@ include __DIR__ . '/../layout/header.php';
             </div>
         </div>
     </main>
- 
+
+<style>
+.col-stt { width: 60px; white-space: nowrap; text-align: center; }
+.col-book-title { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-author { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-category { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-count { width: 120px; white-space: nowrap; text-align: center; }
+.col-status { width: 120px; white-space: nowrap; }
+.col-id { width: 80px; white-space: nowrap; }
+.col-borrower-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-phone { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-date { width: 120px; white-space: nowrap; }
+.col-days-overdue { width: 100px; white-space: nowrap; text-align: center; }
+.col-fine { width: 120px; white-space: nowrap; text-align: right; }
+</style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>

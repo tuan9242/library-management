@@ -7,7 +7,7 @@
                 <div class="footer-section">
                     <div class="footer-logo">
                         <i class="fas fa-book-open"></i>
-                        <span>Thư viện ĐH</span>
+                        <span>Thư viện Số</span>
                     </div>
                     <p class="footer-desc">
                         Hệ thống quản lý thư viện đại học hiện đại, 
@@ -65,7 +65,7 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2025 Thư viện Đại học. All rights reserved.</p>
+                <p>&copy; 2025 Thư viện Số. All rights reserved.</p>
                 <p>Được phát triển với <i class="fas fa-heart"></i> bởi Team Developer</p>
             </div>
         </div>
@@ -77,41 +77,31 @@
 
 <style>
 .footer {
-    background: linear-gradient(135deg, var(--primary-blue-dark) 0%, var(--primary-blue) 100%);
-    color: white;
-    padding: 3rem 0 1rem;
-    margin-top: 4rem;
-}
-
-.footer-content {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 3rem;
-    margin-bottom: 2rem;
-}
-
-.footer-section h4 {
-    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
 }
 
 .footer-logo {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    animation: fadeInUp 0.6s ease;
 }
 
 .footer-logo i {
-    font-size: 2rem;
+    font-size: 2.2rem;
     color: var(--accent-blue-light);
+    filter: drop-shadow(0 0 10px rgba(165, 180, 252, 0.5));
 }
 
 .footer-desc {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.85);
     margin-bottom: 1.5rem;
-    line-height: 1.6;
+    line-height: 1.7;
+    font-size: 0.95rem;
 }
 
 .footer-social {
@@ -120,27 +110,29 @@
 }
 
 .footer-social a {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.1);
+    width: 45px;
+    height: 45px;
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     text-decoration: none;
-    transition: var(--transition);
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .footer-social a:hover {
-    background: var(--accent-blue);
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-blue);
+    background: white;
+    color: var(--primary-blue);
+    transform: translateY(-5px) rotate(5deg);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .footer-title {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.15rem;
+    font-weight: 700;
     margin-bottom: 1.5rem;
     color: white;
 }
@@ -154,17 +146,22 @@
 }
 
 .footer-links a {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.85);
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    transition: var(--transition);
+    gap: 0.6rem;
+    transition: all 0.3s ease;
 }
 
 .footer-links a:hover {
-    color: var(--accent-blue-light);
-    padding-left: 0.5rem;
+    color: white;
+    padding-left: 0.75rem;
+}
+
+.footer-links a i {
+    font-size: 0.9rem;
+    width: 20px;
 }
 
 .footer-contact {
@@ -174,35 +171,47 @@
 .footer-contact li {
     display: flex;
     gap: 1rem;
-    margin-bottom: 1rem;
-    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1.2rem;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.5;
 }
 
 .footer-contact i {
     color: var(--accent-blue-light);
     width: 20px;
     margin-top: 0.25rem;
+    font-size: 1.1rem;
 }
 
 .footer-bottom {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 2rem;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.5);
+    position: relative;
+    z-index: 1;
 }
 
 .footer-bottom p {
     margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
 
 .footer-bottom .fa-heart {
-    color: #ef4444;
+    color: #ff6b6b;
+    animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    10%, 30% { transform: scale(1.2); }
+    20%, 40% { transform: scale(1.1); }
 }
 
 @media (max-width: 768px) {
     .footer-content {
         grid-template-columns: 1fr;
-        gap: 2rem;
+        gap: 2.5rem;
+    }
+    
+    .footer {
+        padding: 2.5rem 0 1rem;
     }
 }
 </style>

@@ -5,7 +5,7 @@
 </h2>
 
 <h2 align="center">
-	University Library Management System
+	Thư viện Số - Digital Library Management System
 </h2>
 
 <div align="center">
@@ -111,17 +111,7 @@ CREATE DATABASE IF NOT EXISTS library_management
   COLLATE utf8mb4_unicode_ci;
 ```
 
-Import cấu trúc và dữ liệu mẫu:
-
-```bash
-# Cách 1: qua MySQL CLI
-mysql -u root -p library_management < database.sql
-mysql -u root -p library_management < migration_add_features.sql
-
-# Cách 2: qua phpMyAdmin / MySQL Workbench
-# - Chọn database library_management
-# - Import lần lượt: database.sql, migration_add_features.sql
-```
+**Lưu ý**: Các bảng cần thiết (cart, notifications) sẽ được tự động tạo khi bạn truy cập ứng dụng lần đầu. Bạn chỉ cần tạo database `library_management` và ứng dụng sẽ tự động setup phần còn lại.
 
 ### 4.4. Cấu hình kết nối DB
 
@@ -176,17 +166,18 @@ Auth:
 ```
 library-management/
 ├── public/                 # Entry point & static (css/, js/, uploads/)
-│   └── index.php
+│   ├── index.php
+│   ├── css/
+│   ├── js/
+│   └── uploads/
 ├── views/                  # Giao diện (auth/, user/, admin/, layout/)
-├── controllers/            # Điều khiển luồng ứng dụng
-├── models/                 # Nghiệp vụ & truy cập dữ liệu
-├── config/                 # Kết nối DB, helpers
+├── functions/              # Business logic functions
+├── handlers/               # Request handlers
+├── config/                 # Kết nối DB, helpers & auto migration
+│   └── database.php
 ├── assets/                 # Ảnh tĩnh
-├── database.sql            # Schema cơ bản
-├── migration_add_features.sql
-├── run_migration.php       # Script hỗ trợ migration
-├── README.md               # Tài liệu này
-└── USER_GUIDE.md           # Hướng dẫn chi tiết
+├── docs/                   # Tài liệu và logos
+└── README.md               # Tài liệu này
 ```
 
 ## ✅ 7. Tài khoản demo (tuỳ chọn)

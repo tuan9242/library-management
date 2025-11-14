@@ -1,13 +1,12 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Book.php';
+require_once __DIR__ . '/../../functions/book.php';
 
-$pageTitle = 'Trang chủ - Thư viện Đại học';
+$pageTitle = 'Trang chủ - Thư viện Số';
 $currentPage = 'home';
 
-$bookModel = new Book();
-$popularBooks = $bookModel->getPopular(6);
-$recentBooks = $bookModel->getAll(8);
+$popularBooks = book_get_popular(6);
+$recentBooks = book_get_all(8);
 
 include __DIR__ . '/../layout/header.php';
 ?>
@@ -16,7 +15,7 @@ include __DIR__ . '/../layout/header.php';
 <section class="hero">
     <div class="container">
         <div class="hero-content">
-            <h1 class="hero-title">Chào mừng đến Thư viện Đại học</h1>
+            <h1 class="hero-title">Chào mừng đến Thư viện Số</h1>
             <p class="hero-subtitle">Khám phá hàng ngàn đầu sách phong phú từ mọi lĩnh vực</p>
             
             <?php if (!isLoggedIn()): ?>
@@ -238,8 +237,8 @@ include __DIR__ . '/../layout/header.php';
 
 <style>
 .hero {
-    background: linear-gradient(135deg, var(--primary-blue-dark) 0%, var(--primary-blue) 100%);
-    padding: 4rem 0;
+    background: linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #818cf8 100%);
+    padding: 5rem 0;
     color: white;
     margin-bottom: 0;
     position: relative;
@@ -253,8 +252,17 @@ include __DIR__ . '/../layout/header.php';
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" fill-opacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom/cover no-repeat;
-    opacity: 0.3;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.08)" fill-opacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom/cover no-repeat;
+    opacity: 0.6;
+    animation: heroPattern 20s ease-in-out infinite;
+}
+
+@keyframes heroPattern {
+    0%, 100% { transform: translateX(0) scale(1); }
+    50% { transform: translateX(-20px) scale(1.05); }
 }
 
 .hero-content {
@@ -263,6 +271,18 @@ include __DIR__ . '/../layout/header.php';
     margin: 0 auto;
     position: relative;
     z-index: 1;
+    animation: fadeInUp 0.8s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .hero-title {
@@ -271,6 +291,7 @@ include __DIR__ . '/../layout/header.php';
     margin-bottom: 1.5rem;
     color: white;
     line-height: 1.2;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .hero-subtitle {
@@ -278,6 +299,7 @@ include __DIR__ . '/../layout/header.php';
     margin-bottom: 2.5rem;
     opacity: 0.95;
     font-weight: 400;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .hero-search {
@@ -366,131 +388,187 @@ include __DIR__ . '/../layout/header.php';
 
 
 .features-section {
-    background: var(--bg-blue-light);
-    padding: 4rem 0;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    padding: 5rem 0;
     border-radius: 0;
+    position: relative;
+}
+
+.features-section::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: white;
+    transform: skewY(-2deg);
 }
 
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
+    gap: 2.5rem;
     margin-top: 2rem;
+    position: relative;
 }
 
 .feature-card {
-    background: var(--bg-primary);
-    padding: 2.5rem;
+    background: white;
+    padding: 3rem 2rem;
     border-radius: var(--radius-lg);
     text-align: center;
-    box-shadow: var(--shadow-md);
-    transition: var(--transition);
-    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.08);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-light));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover::before {
+    transform: scaleX(1);
 }
 
 .feature-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-xl);
-    border-color: var(--primary-blue);
+    transform: translateY(-12px);
+    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.2);
 }
 
 .feature-icon {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1.5rem;
-    font-size: 2rem;
+    font-size: 2.2rem;
     color: white;
-    box-shadow: var(--shadow-blue);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+    transition: var(--transition-normal);
+}
+
+.feature-card:hover .feature-icon {
+    transform: rotateY(360deg);
+    box-shadow: 0 12px 35px rgba(99, 102, 241, 0.4);
 }
 
 .feature-card h3 {
-    font-size: 1.35rem;
+    font-size: 1.4rem;
     margin-bottom: 1rem;
     color: var(--primary-blue-dark);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .feature-card p {
     color: var(--text-secondary);
-    line-height: 1.6;
+    line-height: 1.7;
+    font-size: 1rem;
 }
 
 .books-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem;
+    gap: 2.5rem;
     margin-bottom: 3rem;
 }
 
 .book-card {
     background: white;
-    border-radius: var(--border-radius);
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: var(--shadow);
-    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid var(--border-color);
+    position: relative;
 }
 
 .book-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-12px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2);
+    border-color: var(--primary-blue-light);
 }
 
 .book-cover {
     position: relative;
     width: 100%;
-    height: 250px;
-    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    height: 280px;
+    background: linear-gradient(135deg, #6366f1, #818cf8, #a5b4fc);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 3rem;
-    color: var(--white);
+    color: white;
     overflow: hidden;
+}
+
+.book-cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.4) 100%);
 }
 
 .book-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.book-card:hover .book-cover img {
+    transform: scale(1.1) rotate(2deg);
 }
 
 .book-status {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
+    padding: 0.5rem 1.2rem;
+    border-radius: 25px;
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.4rem;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .book-status.available {
-    background: rgba(16, 185, 129, 0.9);
+    background: rgba(16, 185, 129, 0.95);
     color: white;
 }
 
 .book-status.unavailable {
-    background: rgba(239, 68, 68, 0.9);
+    background: rgba(239, 68, 68, 0.95);
     color: white;
 }
 
 .book-info {
-    padding: 1.5rem;
+    padding: 1.75rem;
 }
 
 .book-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -500,15 +578,17 @@ include __DIR__ . '/../layout/header.php';
     word-break: break-word;
     overflow-wrap: break-word;
     hyphens: auto;
+    min-height: 3.2rem;
 }
 
 .book-author {
-    color: var(--gray);
-    font-size: 0.9rem;
+    color: var(--primary-blue);
+    font-size: 0.95rem;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-weight: 500;
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: break-word;
@@ -518,16 +598,19 @@ include __DIR__ . '/../layout/header.php';
 .book-meta {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .meta-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--gray);
+    gap: 0.6rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: break-word;
@@ -535,15 +618,16 @@ include __DIR__ . '/../layout/header.php';
 }
 
 .meta-item i {
-    width: 16px;
-    color: var(--primary);
+    width: 18px;
+    color: var(--primary-blue);
+    font-size: 0.9rem;
 }
 
 .book-description {
     font-size: 0.9rem;
-    color: var(--gray);
-    line-height: 1.5;
-    margin-bottom: 1rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: break-word;
@@ -552,7 +636,7 @@ include __DIR__ . '/../layout/header.php';
 
 .book-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .book-actions .btn {

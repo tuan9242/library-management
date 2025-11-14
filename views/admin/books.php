@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Book.php';
+require_once __DIR__ . '/../../functions/book.php';
 
 if (!isLibrarian()) {
     redirect('index.php');
@@ -9,14 +9,16 @@ if (!isLibrarian()) {
 $pageTitle = 'Quản lý sách - Admin';
 $currentPage = 'admin';
 
-$bookModel = new Book();
-$database = new Database();
-$conn = $database->getConnection();
+$conn = get_db_connection();
+if (!$conn) {
+    $_SESSION['alert'] = alert('Không thể kết nối cơ sở dữ liệu!', 'error');
+    redirect('index.php');
+}
 
 // Xử lý xóa sách
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     if (!isLibrarian()) { redirect('index.php'); }
-    if ($bookModel->delete($_GET['id'])) {
+    if (book_delete((int)$_GET['id'])) {
         $_SESSION['alert'] = alert('Xóa sách thành công!', 'success');
     } else {
         $_SESSION['alert'] = alert('Không thể xóa sách này!', 'error');
@@ -28,7 +30,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 if (isset($_GET['action']) && $_GET['action'] === 'clear-cover' && isset($_GET['id'])) {
     if (!isLibrarian()) { redirect('index.php'); }
     $bookId = (int)$_GET['id'];
-    $existing = $bookModel->getById($bookId);
+    $existing = book_get_by_id($bookId);
     if ($existing && !empty($existing['cover_image'])) {
         $path = __DIR__ . '/../../public/' . $existing['cover_image'];
         if (strpos($existing['cover_image'], 'uploads/books/') === 0 && is_file($path)) {
@@ -47,18 +49,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'clear-cover' && isset($_GET['
 
 // Xử lý thêm/sửa sách
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $bookModel->isbn = sanitize($_POST['isbn']);
-    $bookModel->title = sanitize($_POST['title']);
-    $bookModel->author = sanitize($_POST['author']);
-    $bookModel->publisher = sanitize($_POST['publisher']);
-    $bookModel->published_year = sanitize($_POST['published_year']);
-    $bookModel->category_id = sanitize($_POST['category_id']);
-    $bookModel->available_quantity = sanitize($_POST['available_quantity']);
-    $bookModel->description = sanitize($_POST['description']);
-    $bookModel->location = sanitize($_POST['location']);
-    $bookModel->status = sanitize($_POST['status']);
-    // Upload/clear cover image if provided
-    $bookModel->cover_image = '';
+    $bookData = [
+        'isbn'               => sanitize($_POST['isbn']),
+        'title'              => sanitize($_POST['title']),
+        'author'             => sanitize($_POST['author']),
+        'publisher'          => sanitize($_POST['publisher']),
+        'published_year'     => sanitize($_POST['published_year']),
+        'category_id'        => sanitize($_POST['category_id']),
+        'available_quantity' => sanitize($_POST['available_quantity']),
+        'description'        => sanitize($_POST['description']),
+        'location'           => sanitize($_POST['location']),
+        'status'             => sanitize($_POST['status']),
+        'cover_image'        => ''
+    ];
     if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
         $allowed = ['image/jpeg','image/png','image/webp','image/gif'];
         if (in_array($_FILES['cover_image']['type'], $allowed)) {
@@ -68,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filename = 'cover_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
             $dest = $uploadDir . $filename;
             if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $dest)) {
-                $bookModel->cover_image = 'uploads/books/' . $filename; // relative to public/
+                $bookData['cover_image'] = 'uploads/books/' . $filename; // relative to public/
             }
         }
     }
@@ -76,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle clear existing cover
     $existing = null;
     if (isset($_POST['book_id'])) {
-        $existing = $bookModel->getById($_POST['book_id']);
+        $existing = book_get_by_id((int)$_POST['book_id']);
     }
     if (isset($_POST['clear_cover']) && $_POST['clear_cover'] === '1') {
         // Try to delete existing file if inside public/uploads/books
@@ -86,24 +89,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 @unlink($path);
             }
         }
-        $bookModel->cover_image = '';
+        $bookData['cover_image'] = '';
     }
     // Preserve existing cover when editing and no new file uploaded and not cleared
-    if (isset($_POST['book_id']) && empty($bookModel->cover_image) && (!isset($_POST['clear_cover']) || $_POST['clear_cover'] !== '1')) {
+    if (isset($_POST['book_id']) && empty($bookData['cover_image']) && (!isset($_POST['clear_cover']) || $_POST['clear_cover'] !== '1')) {
         if ($existing && !empty($existing['cover_image'])) {
-            $bookModel->cover_image = $existing['cover_image'];
+            $bookData['cover_image'] = $existing['cover_image'];
         }
     }
     
     if (isset($_POST['book_id']) && !empty($_POST['book_id'])) {
-        $bookModel->id = $_POST['book_id'];
-        if ($bookModel->update()) {
+        if (book_update((int)$_POST['book_id'], $bookData)) {
             $_SESSION['alert'] = alert('Cập nhật sách thành công!', 'success');
         } else {
             $_SESSION['alert'] = alert('Có lỗi xảy ra!', 'error');
         }
     } else {
-        if ($bookModel->create()) {
+        if (book_create($bookData)) {
             $_SESSION['alert'] = alert('Thêm sách thành công!', 'success');
         } else {
             $_SESSION['alert'] = alert('Có lỗi xảy ra!', 'error');
@@ -122,18 +124,18 @@ $offset = ($page_num - 1) * $limit;
 
 $keyword = $_GET['search'] ?? '';
 if ($keyword) {
-    $books = $bookModel->search($keyword, null, $limit, $offset);
-    $totalBooks = $bookModel->getSearchCount($keyword);
+    $books = book_search($keyword, null, $limit, $offset);
+    $totalBooks = book_get_search_count($keyword);
 } else {
-    $books = $bookModel->getAll($limit, $offset);
-    $totalBooks = $bookModel->getTotalCount();
+    $books = book_get_all($limit, $offset);
+    $totalBooks = book_get_total_count();
 }
 $totalPages = ceil($totalBooks / $limit);
 
 // Lấy thông tin sách để sửa
 $editBook = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $editBook = $bookModel->getById($_GET['id']);
+    $editBook = book_get_by_id((int)$_GET['id']);
 }
 
 include __DIR__ . '/../layout/header.php';
@@ -509,15 +511,48 @@ function toggleModal(modalId) {
     border: 1px solid var(--light-gray);
     box-shadow: var(--shadow-sm);
 }
-.col-title, .col-author, .col-location, .col-category {
-    max-width: 240px;
+.col-title { 
+    max-width: 280px; 
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.col-year { width: 80px; }
+.col-author { 
+    max-width: 200px; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.col-location { 
+    max-width: 150px; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.col-category { 
+    max-width: 180px; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.col-year { 
+    width: 80px; 
+    white-space: nowrap;
+}
+.table td:first-child { 
+    width: 80px; 
+    white-space: nowrap;
+}
+.table td:last-child { 
+    white-space: nowrap;
+    width: auto;
+    max-width: none;
+}
 @media (max-width: 768px) {
-    .col-title, .col-author, .col-location, .col-category { max-width: 160px; }
+    .col-title { max-width: 180px; }
+    .col-author { max-width: 140px; }
+    .col-location { max-width: 100px; }
+    .col-category { max-width: 120px; }
 }
 </style>
 

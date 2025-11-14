@@ -9,6 +9,9 @@
            class="sidebar-link <?php echo ($page ?? '') === 'admin-dashboard' ? 'active' : ''; ?>">
             <i class="fas fa-chart-line"></i>
             <span>Tổng quan</span>
+            <?php if (($page ?? '') === 'admin-dashboard'): ?>
+                <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.8rem;"></i>
+            <?php endif; ?>
         </a>
         
         <?php if (isLibrarian()): ?>
@@ -16,12 +19,18 @@
            class="sidebar-link <?php echo ($page ?? '') === 'admin-books' ? 'active' : ''; ?>">
             <i class="fas fa-book"></i>
             <span>Quản lý sách</span>
+            <?php if (($page ?? '') === 'admin-books'): ?>
+                <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.8rem;"></i>
+            <?php endif; ?>
         </a>
         
         <a href="index.php?page=admin-borrows" 
            class="sidebar-link <?php echo ($page ?? '') === 'admin-borrows' ? 'active' : ''; ?>">
             <i class="fas fa-hand-holding"></i>
             <span>Quản lý mượn trả</span>
+            <?php if (($page ?? '') === 'admin-borrows'): ?>
+                <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.8rem;"></i>
+            <?php endif; ?>
         </a>
         <?php endif; ?>
         
@@ -30,6 +39,9 @@
            class="sidebar-link <?php echo ($page ?? '') === 'admin-users' ? 'active' : ''; ?>">
             <i class="fas fa-users"></i>
             <span>Quản lý người dùng</span>
+            <?php if (($page ?? '') === 'admin-users'): ?>
+                <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.8rem;"></i>
+            <?php endif; ?>
         </a>
         <?php endif; ?>
 
@@ -38,6 +50,9 @@
            class="sidebar-link <?php echo ($page ?? '') === 'admin-categories' ? 'active' : ''; ?>">
             <i class="fas fa-tags"></i>
             <span>Danh mục sách</span>
+            <?php if (($page ?? '') === 'admin-categories'): ?>
+                <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.8rem;"></i>
+            <?php endif; ?>
         </a>
         <?php endif; ?>
 
@@ -46,6 +61,9 @@
            class="sidebar-link <?php echo ($page ?? '') === 'admin-reports' ? 'active' : ''; ?>">
             <i class="fas fa-file-alt"></i>
             <span>Báo cáo thống kê</span>
+            <?php if (($page ?? '') === 'admin-reports'): ?>
+                <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.8rem;"></i>
+            <?php endif; ?>
         </a>
         <?php endif; ?>
     </nav>

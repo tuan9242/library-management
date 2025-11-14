@@ -1,48 +1,54 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Cart.php';
-require_once __DIR__ . '/../../models/Borrow.php';
+require_once __DIR__ . '/../../functions/cart.php';
+require_once __DIR__ . '/../../functions/borrow.php';
 
 if (!isLoggedIn()) {
     redirect('index.php?page=login');
 }
 
-$pageTitle = 'Giỏ hàng - Thư viện Đại học';
+$pageTitle = 'Giỏ hàng - Thư viện Số';
 $currentPage = 'cart';
 
-$cartModel = new Cart();
-$borrowModel = new Borrow();
-
-// Xử lý cập nhật số lượng
+// Xử lý cập nhật số lượng và thời gian mượn
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'update') {
         $id = (int)$_POST['id'];
         $quantity = max(1, (int)$_POST['quantity']);
-        $cartModel->updateQuantity($id, $_SESSION['user_id'], $quantity);
-        $_SESSION['alert'] = alert('Đã cập nhật giỏ hàng!', 'success');
+        cart_update_quantity($id, $_SESSION['user_id'], $quantity);
+        $_SESSION['alert'] = alert('Đã cập nhật số lượng!', 'success');
+        redirect('index.php?page=cart');
+    } elseif ($_POST['action'] === 'update-duration') {
+        $id = (int)$_POST['id'];
+        $durationDays = max(1, (int)$_POST['duration_days']);
+        if (cart_update_duration($id, $_SESSION['user_id'], $durationDays)) {
+            $_SESSION['alert'] = alert('Đã cập nhật thời gian mượn!', 'success');
+        } else {
+            $_SESSION['alert'] = alert('Không thể cập nhật thời gian mượn!', 'error');
+        }
         redirect('index.php?page=cart');
     } elseif ($_POST['action'] === 'remove') {
         $id = (int)$_POST['id'];
-        $cartModel->remove($id, $_SESSION['user_id']);
+        cart_remove($id, $_SESSION['user_id']);
         $_SESSION['alert'] = alert('Đã xóa khỏi giỏ hàng!', 'success');
         redirect('index.php?page=cart');
     } elseif ($_POST['action'] === 'borrow-all') {
         // Mượn tất cả sách trong giỏ hàng
-        $cartItems = $cartModel->getByUser($_SESSION['user_id']);
+        $cartItems = cart_get_by_user($_SESSION['user_id']);
         $successCount = 0;
         $errorCount = 0;
         
         foreach ($cartItems as $item) {
-            $result = $borrowModel->create(
+            $result = borrow_create(
                 $_SESSION['user_id'],
-                $item['book_id'],
-                $item['quantity'],
-                $item['duration_days']
+                (int)$item['book_id'],
+                (int)$item['quantity'],
+                (int)$item['duration_days']
             );
             
             if ($result['success']) {
                 $successCount++;
-                $cartModel->remove($item['id'], $_SESSION['user_id']);
+                cart_remove((int)$item['id'], $_SESSION['user_id']);
             } else {
                 $errorCount++;
             }
@@ -58,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // Lấy giỏ hàng
-$cartItems = $cartModel->getByUser($_SESSION['user_id']);
+$cartItems = cart_get_by_user($_SESSION['user_id']);
 
 include __DIR__ . '/../layout/header.php';
 ?>
@@ -135,7 +141,18 @@ include __DIR__ . '/../layout/header.php';
                                 
                                 <div class="duration-control">
                                     <label>Thời gian mượn:</label>
-                                    <span><?php echo $item['duration_days']; ?> ngày</span>
+                                    <form method="POST" style="display: inline-flex; gap: 0.5rem; align-items: center;">
+                                        <input type="hidden" name="action" value="update-duration">
+                                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                        <input type="number" 
+                                               name="duration_days" 
+                                               value="<?php echo $item['duration_days']; ?>" 
+                                               min="1" 
+                                               max="365"
+                                               class="duration-input"
+                                               onchange="this.form.submit()">
+                                        <span style="font-size: 0.85rem; color: var(--gray);">ngày</span>
+                                    </form>
                                 </div>
                                 
                                 <div class="cart-item-price">
@@ -322,11 +339,16 @@ include __DIR__ . '/../layout/header.php';
     font-weight: 600;
 }
 
-.quantity-input {
+.quantity-input, .duration-input {
     width: 80px;
     padding: 0.5rem;
     border: 2px solid var(--light-gray);
     border-radius: var(--border-radius);
+    font-size: 0.9rem;
+}
+
+.duration-input {
+    width: 100px;
 }
 
 .cart-item-price {

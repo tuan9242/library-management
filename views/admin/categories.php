@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../models/Category.php';
+require_once __DIR__ . '/../../functions/category.php';
 
 if (!isLibrarian()) {
     redirect('index.php');
@@ -10,11 +10,9 @@ $pageTitle = 'Quản lý danh mục - Admin';
 $currentPage = 'admin';
 $page = 'admin-categories';
 
-$categoryModel = new Category();
-
 // Xử lý xóa
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    if ($categoryModel->delete($_GET['id'])) {
+    if (category_delete((int)$_GET['id'])) {
         $_SESSION['alert'] = alert('Xóa danh mục thành công!', 'success');
     } else {
         $_SESSION['alert'] = alert('Không thể xóa danh mục này!', 'error');
@@ -24,18 +22,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
 // Xử lý thêm/sửa
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $categoryModel->name = sanitize($_POST['name']);
-    $categoryModel->description = sanitize($_POST['description']);
+    $categoryData = [
+        'name'        => sanitize($_POST['name']),
+        'description' => sanitize($_POST['description'])
+    ];
     
     if (isset($_POST['category_id']) && !empty($_POST['category_id'])) {
-        $categoryModel->id = $_POST['category_id'];
-        if ($categoryModel->update()) {
+        if (category_update((int)$_POST['category_id'], $categoryData)) {
             $_SESSION['alert'] = alert('Cập nhật danh mục thành công!', 'success');
         } else {
             $_SESSION['alert'] = alert('Có lỗi xảy ra!', 'error');
         }
     } else {
-        if ($categoryModel->create()) {
+        if (category_create($categoryData)) {
             $_SESSION['alert'] = alert('Thêm danh mục thành công!', 'success');
         } else {
             $_SESSION['alert'] = alert('Có lỗi xảy ra!', 'error');
@@ -46,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // API lấy 1 danh mục (cho nút Sửa)
 if (isset($_GET['action']) && $_GET['action'] === 'get' && isset($_GET['id'])) {
     header('Content-Type: application/json');
-    $cat = $categoryModel->getById($_GET['id']);
+    $cat = category_get_by_id((int)$_GET['id']);
     if ($cat) {
         echo json_encode(['success' => true, 'category' => $cat]);
     } else {
@@ -55,12 +54,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'get' && isset($_GET['id'])) {
     exit;
 }
 // Lấy danh sách danh mục
-$categories = $categoryModel->getAll();
+$categories = category_get_all();
 
 // Lấy danh mục để sửa
 $editCategory = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $editCategory = $categoryModel->getById($_GET['id']);
+    $editCategory = category_get_by_id((int)$_GET['id']);
 }
 
 include __DIR__ . '/../layout/header.php';
@@ -96,7 +95,7 @@ include __DIR__ . '/../layout/header.php';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="table-responsive table-wrapper">
                         <table class="table" id="categoriesTable">
                             <thead>
                                 <tr>
@@ -111,18 +110,18 @@ include __DIR__ . '/../layout/header.php';
                             <tbody>
                                 <?php foreach ($categories as $category): ?>
                                 <tr>
-                                    <td><?php echo $category['id']; ?></td>
-                                    <td>
+                                    <td class="col-id"><?php echo $category['id']; ?></td>
+                                    <td class="col-name">
                                         <strong><?php echo htmlspecialchars($category['name']); ?></strong>
                                     </td>
-                                    <td><?php echo htmlspecialchars($category['description']); ?></td>
-                                    <td>
+                                    <td class="col-description"><?php echo htmlspecialchars($category['description']); ?></td>
+                                    <td class="col-count">
                                         <span class="badge badge-primary">
-                                            <?php echo $categoryModel->getBookCount($category['id']); ?> sách
+                                            <?php echo category_get_book_count((int)$category['id']); ?> sách
                                         </span>
                                     </td>
-                                    <td><?php echo formatDate($category['created_at']); ?></td>
-                                    <td>
+                                    <td class="col-date"><?php echo formatDate($category['created_at']); ?></td>
+                                    <td class="col-actions">
                                         <div class="table-actions">
                                             <button class="btn btn-sm btn-primary" onclick="editCategory(<?php echo $category['id']; ?>)">
                                                 <i class="fas fa-edit"></i>
@@ -267,5 +266,14 @@ window.onclick = function(event) {
     }
 }
 </script>
+
+<style>
+.col-id { width: 80px; white-space: nowrap; }
+.col-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-description { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-count { width: 120px; white-space: nowrap; text-align: center; }
+.col-date { width: 140px; white-space: nowrap; }
+.col-actions { width: auto; white-space: nowrap; max-width: none; }
+</style>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>

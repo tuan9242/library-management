@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 
-$pageTitle = 'Đăng nhập - Thư viện Đại học';
+$pageTitle = 'Đăng nhập - Thư viện Số';
 $currentPage = 'login';
 
 // Xử lý đăng nhập
@@ -9,9 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitize($_POST['username']);
     $password = $_POST['password'];
     
-    $database = new Database();
-    $conn = $database->getConnection();
+    $conn = get_db_connection();
     
+    if (!$conn) {
+        $error = "Không thể kết nối cơ sở dữ liệu!";
+    } else {
     $query = "SELECT * FROM users WHERE (username = :username OR email = :username) AND status = 'active'";
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':username', $username);
@@ -43,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         $error = "Tên đăng nhập hoặc mật khẩu không đúng!";
+        }
     }
 }
 
@@ -140,7 +143,7 @@ include __DIR__ . '/../layout/header.php';
             <div class="auth-image">
                 <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800" alt="Library">
                 <div class="auth-image-overlay">
-                    <h3>Thư viện Đại học</h3>
+                    <h3>Thư viện Số</h3>
                     <p>Khám phá tri thức, nâng tầm tương lai</p>
                 </div>
             </div>

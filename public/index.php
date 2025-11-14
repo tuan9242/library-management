@@ -1,34 +1,10 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 
-// Simple MVC-style dispatching for controller/action endpoints
-if (isset($_GET['controller']) && isset($_GET['action'])) {
-    $controller = preg_replace('/[^a-zA-Z0-9_]/', '', $_GET['controller']);
-    $action = preg_replace('/[^a-zA-Z0-9_]/', '', $_GET['action']);
-
-    $controllerFile = __DIR__ . '/../controllers/' . ucfirst($controller) . 'Controller.php';
-    if (file_exists($controllerFile)) {
-        require_once $controllerFile;
-        $className = ucfirst($controller) . 'Controller';
-        if (class_exists($className)) {
-            $instance = new $className();
-            if (method_exists($instance, $action)) {
-                // JSON endpoints shouldn't output BOM/HTML
-                call_user_func([$instance, $action]);
-                exit;
-            }
-        }
-    }
-    http_response_code(404);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Endpoint not found']);
-    exit;
-}
-
 // Xử lý logout
 if (isset($_GET['action']) && $_GET['action'] === 'logout') {
-    session_destroy();
-    redirect('index.php?page=login');
+    require_once __DIR__ . '/../handlers/auth.php';
+    handle_logout();
 }
 
 // Routing
@@ -65,10 +41,6 @@ switch ($page) {
         
     case 'register':
         include __DIR__ . '/../views/auth/register.php';
-        break;
-        
-    case 'forgot-password':
-        include __DIR__ . '/../views/auth/forgot-password.php';
         break;
         
     case 'search':
@@ -120,126 +92,43 @@ switch ($page) {
         break;
         
     case 'api-notifications':
-        // API thông báo
-        if (!isLoggedIn()) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập']);
-            exit;
-        }
-        
-        require_once __DIR__ . '/../models/Notification.php';
-        $notificationModel = new Notification();
-        $action = $_GET['action'] ?? '';
-        
-        if ($action === 'get') {
-            $notifications = $notificationModel->getByUser($_SESSION['user_id'], 10, false);
-            // Format time ago
-            foreach ($notifications as &$notif) {
-                $created = new DateTime($notif['created_at']);
-                $now = new DateTime();
-                $diff = $now->diff($created);
-                
-                if ($diff->days > 0) {
-                    $notif['time_ago'] = $diff->days . ' ngày trước';
-                } elseif ($diff->h > 0) {
-                    $notif['time_ago'] = $diff->h . ' giờ trước';
-                } elseif ($diff->i > 0) {
-                    $notif['time_ago'] = $diff->i . ' phút trước';
-                } else {
-                    $notif['time_ago'] = 'Vừa xong';
-                }
-            }
-            
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'notifications' => $notifications]);
-            exit;
-        } elseif ($action === 'mark-read') {
-            $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-            $result = $notificationModel->markAsRead($id, $_SESSION['user_id']);
-            header('Content-Type: application/json');
-            echo json_encode(['success' => $result]);
-            exit;
-        } elseif ($action === 'mark-all-read') {
-            $result = $notificationModel->markAllAsRead($_SESSION['user_id']);
-            header('Content-Type: application/json');
-            echo json_encode(['success' => $result]);
-            exit;
-        }
+        require_once __DIR__ . '/../handlers/notification.php';
+        handle_notifications();
         break;
         
     case 'api-cart':
-        // API giỏ hàng
-        if (!isLoggedIn()) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập']);
-            exit;
-        }
-        
-        require_once __DIR__ . '/../models/Cart.php';
-        $cartModel = new Cart();
-        $action = $_GET['action'] ?? '';
-        
-        if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            $bookId = isset($_POST['book_id']) ? (int)$_POST['book_id'] : 0;
-            $quantity = isset($_POST['quantity']) ? max(1, (int)$_POST['quantity']) : 1;
-            $durationDays = isset($_POST['duration_days']) ? max(1, (int)$_POST['duration_days']) : 30;
-            $result = $cartModel->add($_SESSION['user_id'], $bookId, $quantity, $durationDays);
-            header('Content-Type: application/json');
-            echo json_encode($result);
-            exit;
-        }
+        require_once __DIR__ . '/../handlers/cart.php';
+        handle_cart();
         break;
         
     case 'borrow-book':
-        // Xử lý mượn sách qua AJAX
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_id'])) {
-            require_once __DIR__ . '/../models/Borrow.php';
-            $borrowModel = new Borrow();
-            $quantity = isset($_POST['quantity']) ? max(1, (int)$_POST['quantity']) : 1;
-            $durationDays = isset($_POST['duration_days']) ? max(1, (int)$_POST['duration_days']) : 30;
-            $pricePerDay = isset($_POST['price_per_day']) ? max(0, (int)$_POST['price_per_day']) : 0; // optional
-            $result = $borrowModel->create($_SESSION['user_id'], (int)$_POST['book_id'], $quantity, $durationDays, $pricePerDay);
-            header('Content-Type: application/json');
-            echo json_encode($result);
-            exit;
-        }
+        require_once __DIR__ . '/../handlers/borrow.php';
+        handle_borrow_book();
         break;
         
     case 'approve-borrow':
-        // Duyệt yêu cầu mượn sách (thủ thư)
-        if (!isLibrarian()) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Không có quyền']);
-            exit;
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['borrow_id'])) {
-            require_once __DIR__ . '/../models/Borrow.php';
-            $borrowModel = new Borrow();
-            $result = $borrowModel->approve((int)$_POST['borrow_id']);
-            header('Content-Type: application/json');
-            echo json_encode($result);
-            exit;
-        }
+        require_once __DIR__ . '/../handlers/borrow.php';
+        handle_approve_borrow();
         break;
         
     case 'reject-borrow':
-        // Từ chối yêu cầu mượn sách (thủ thư)
-        if (!isLibrarian()) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Không có quyền']);
-            exit;
-        }
+        require_once __DIR__ . '/../handlers/borrow.php';
+        handle_reject_borrow();
+        break;
+
+    case 'return-borrow':
+        require_once __DIR__ . '/../handlers/borrow.php';
+        handle_return_borrow();
+        break;
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['borrow_id'])) {
-            require_once __DIR__ . '/../models/Borrow.php';
-            $borrowModel = new Borrow();
-            $reason = isset($_POST['reason']) ? sanitize($_POST['reason']) : '';
-            $result = $borrowModel->reject((int)$_POST['borrow_id'], $reason);
-            header('Content-Type: application/json');
-            echo json_encode($result);
-            exit;
-        }
+    case 'upload-cover':
+        require_once __DIR__ . '/../handlers/book.php';
+        handle_upload_cover();
+        break;
+        
+    case 'delete-user':
+        require_once __DIR__ . '/../handlers/user.php';
+        handle_delete_user();
         break;
         
     case 'home':

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../functions/borrow.php';
 
 if (!isLibrarian()) {
     redirect('index.php');
@@ -9,13 +10,14 @@ $pageTitle = 'Quản lý mượn trả - Admin';
 $currentPage = 'admin';
 $page = 'admin-borrows';
 
-$database = new Database();
-$conn = $database->getConnection();
+$conn = get_db_connection();
 
 // Lấy danh sách mượn sách
 $filter = $_GET['filter'] ?? 'all';
 $keyword = $_GET['search'] ?? '';
 
+$borrows = [];
+if ($conn) {
 $query = "SELECT b.*, u.full_name, u.phone, u.email, bk.title, bk.author, bk.isbn
           FROM borrows b
           JOIN users u ON b.user_id = u.id
@@ -35,24 +37,26 @@ $query .= " ORDER BY b.created_at DESC";
 $stmt = $conn->prepare($query);
 
 if ($filter !== 'all') {
-    $stmt->bindParam(':status', $filter);
+        $stmt->bindValue(':status', $filter);
 }
 
 if ($keyword) {
     $searchTerm = "%{$keyword}%";
-    $stmt->bindParam(':keyword', $searchTerm);
+        $stmt->bindValue(':keyword', $searchTerm);
 }
 
 $stmt->execute();
 $borrows = $stmt->fetchAll();
+}
 
 // Thống kê
+$statsData = borrow_get_statistics();
 $stats = [
-    'all' => $conn->query("SELECT COUNT(*) FROM borrows")->fetchColumn(),
-    'pending' => $conn->query("SELECT COUNT(*) FROM borrows WHERE status = 'pending'")->fetchColumn(),
-    'borrowed' => $conn->query("SELECT COUNT(*) FROM borrows WHERE status = 'borrowed'")->fetchColumn(),
-    'returned' => $conn->query("SELECT COUNT(*) FROM borrows WHERE status = 'returned'")->fetchColumn(),
-    'overdue' => $conn->query("SELECT COUNT(*) FROM borrows WHERE status = 'overdue'")->fetchColumn(),
+    'all'      => $statsData['total'] ?? 0,
+    'pending'  => $statsData['pending'] ?? 0,
+    'borrowed' => $statsData['borrowed'] ?? 0,
+    'returned' => $statsData['returned'] ?? 0,
+    'overdue'  => $statsData['overdue'] ?? 0,
 ];
 
 include __DIR__ . '/../layout/header.php';
@@ -158,37 +162,37 @@ include __DIR__ . '/../layout/header.php';
                                 ?>
                                 <tr>
                                     <td>#<?php echo $borrow['id']; ?></td>
-                                    <td>
+                                    <td class="col-borrower-name">
                                         <strong><?php echo htmlspecialchars($borrow['full_name']); ?></strong>
                                     </td>
-                                    <td>
-                                        <div style="font-size: 0.85rem;">
-                                            <div><i class="fas fa-phone"></i> <?php echo htmlspecialchars($borrow['phone']); ?></div>
-                                            <div><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($borrow['email']); ?></div>
+                                    <td class="col-contact allow-wrap">
+                                        <div style="font-size: 0.85rem; line-height: 1.4;">
+                                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fas fa-phone"></i> <?php echo htmlspecialchars($borrow['phone']); ?></div>
+                                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($borrow['email']); ?></div>
                                         </div>
                                     </td>
-                                    <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <td class="col-book-title">
                                         <?php echo htmlspecialchars($borrow['title']); ?>
                                     </td>
-                                    <td style="max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><code><?php echo $borrow['isbn']; ?></code></td>
-                                    <td><?php echo $quantity; ?> cuốn</td>
-                                    <td><?php echo $borrow['borrow_date'] ? formatDate($borrow['borrow_date']) : '-'; ?></td>
-                                    <td><?php echo formatDate($borrow['due_date']); ?></td>
-                                    <td>
+                                    <td class="col-isbn"><code><?php echo $borrow['isbn']; ?></code></td>
+                                    <td class="col-quantity"><?php echo $quantity; ?> cuốn</td>
+                                    <td class="col-date"><?php echo $borrow['borrow_date'] ? formatDate($borrow['borrow_date']) : '-'; ?></td>
+                                    <td class="col-date"><?php echo formatDate($borrow['due_date']); ?></td>
+                                    <td class="col-date">
                                         <?php if ($borrow['return_date']): ?>
                                             <?php echo formatDate($borrow['return_date']); ?>
                                         <?php else: ?>
                                             <span class="text-gray">Chưa trả</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td class="col-fine">
                                         <?php if ($currentFine > 0): ?>
                                             <span class="text-danger"><strong><?php echo number_format($currentFine); ?>đ</strong></span>
                                         <?php else: ?>
                                             <span class="text-success">0đ</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td class="col-status">
                                         <?php if ($borrow['status'] === 'pending'): ?>
                                             <span class="badge badge-info">Chờ duyệt</span>
                                         <?php elseif ($borrow['status'] === 'borrowed'): ?>
@@ -201,7 +205,7 @@ include __DIR__ . '/../layout/header.php';
                                             <span class="badge badge-danger">Quá hạn</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td class="col-actions">
                                         <?php if ($borrow['status'] === 'pending'): ?>
                                             <button class="btn btn-success btn-sm" 
                                                     onclick="approveBorrow(<?php echo $borrow['id']; ?>)"
@@ -303,6 +307,68 @@ include __DIR__ . '/../layout/header.php';
     font-size: 0.85rem;
     margin: 0.25rem;
 }
+
+/* Table column styles to prevent text wrapping */
+.col-borrower-name {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.col-contact {
+    max-width: 220px;
+}
+
+.col-book-title {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.col-isbn {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.col-quantity {
+    width: 100px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.col-date {
+    width: 120px;
+    white-space: nowrap;
+}
+
+.col-fine {
+    width: 100px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.col-status {
+    width: 120px;
+    white-space: nowrap;
+}
+
+.col-actions {
+    width: auto;
+    white-space: nowrap;
+    max-width: none;
+}
+
+@media (max-width: 768px) {
+    .col-borrower-name { max-width: 140px; }
+    .col-contact { max-width: 180px; }
+    .col-book-title { max-width: 200px; }
+    .col-isbn { max-width: 100px; }
+    .col-date { width: 100px; }
+}
 </style>
 
 <script>
@@ -361,7 +427,7 @@ function returnBook(borrowId) {
         const formData = new FormData();
         formData.append('borrow_id', borrowId);
         
-        fetch('index.php?controller=borrow&action=return', {
+        fetch('index.php?page=return-borrow', {
             method: 'POST',
             body: formData
         })

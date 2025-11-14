@@ -1,0 +1,48 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+error_log
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.old
+
+# Uploads (giữ lại cấu trúc nhưng ignore nội dung)
+public/uploads/books/*
+!public/uploads/books/.gitkeep
+!public/uploads/defaults/
+
+# Cache
+cache/
+tmp/
+
+# Database dumps (nếu có)
+*.sql.bak
+*.sql.gz
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# PHP
+composer.phar
+
