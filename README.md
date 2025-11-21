@@ -56,19 +56,22 @@ Hệ thống Quản lý Thư viện hỗ trợ quản trị sách, người dùn
 
 ## 🚀 3. Chức năng chính (Screens & Features)
 
-- Đăng nhập/Đăng ký người dùng, phân quyền Admin/Thủ thư/Sinh viên
+- Đăng nhập
 ![Đăng nhập/Đăng ký người dùng](docs/images/1.png)
+- Đăng ký người dùng
 ![Đăng nhập/Đăng ký người dùng](docs/images/2.png)
 - Trang chủ, tìm kiếm sách theo từ khóa và danh mục
 ![Trang chủ, tìm kiếm sách theo từ khóa và danh mục](docs/images/3.png)
-- Chi tiết sách, gợi ý sách liên quan
+- Chi tiết sách
 ![Chi tiết sách, gợi ý sách liên quan](docs/images/4.png)
-- Giỏ mượn, mượn/trả sách, tính phí trễ hạn
+- Giỏ mượn
 ![Giỏ mượn, mượn/trả sách, tính phí trễ hạn](docs/images/5.png)
-- Quản lý sách, người dùng, mượn trả (Admin/Thủ thư)
-![Quản lý sách, người dùng, mượn trả (Admin/Thủ thư)](docs/images/6.png)
+- Mượn/trả sách
+- Quản lý sách
 ![Quản lý sách, người dùng, mượn trả (Admin/Thủ thư)](docs/images/7.png)
+- Quản lý Mượn trả
 ![Quản lý sách, người dùng, mượn trả (Admin/Thủ thư)](docs/images/8.png)
+- Quản lý Người dùng
 ![Quản lý sách, người dùng, mượn trả (Admin/Thủ thư](docs/images/9.png)
 - Dashboard thống kê và báo cáo
 ![Dashboard thống kê và báo cáo](docs/images/10.png)
